@@ -1,0 +1,25 @@
+{
+  "name": "erc-721-token",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/docbull/erc-721-token.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/docbull/erc-721-token/issues"
+  },
+  "homepage": "https://github.com/docbull/erc-721-token#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.7.3"
+  }
+}
