@@ -36,15 +36,35 @@ contract NFTMarket is ERC721URIStorage {
         owner = payable(msg.sender);
     }
 
-    function createToken(string memory tokenURI, uint256 price) public payable returns (uint) {
+    // function createToken(string memory tokenURI, uint256 price) public payable returns (uint) {
+    //     _tokenIds.increment();
+    //     uint256 newTokenId = _tokenIds.current();
+
+    //     _mint(msg.sender, newTokenId);
+    //     _setTokenURI(newTokenId, tokenURI);
+    //     createTokenItem(newTokenId, price);
+    //     return newTokenId;
+    // }
+
+    function mintNFT(string memory tokenURI) public payable returns (uint) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
         _mint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, tokenURI);
-        createTokenItem(newTokenId, price);
+        createTokenItem(newTokenId, listingPrice);
         return newTokenId;
     }
+
+    // function mintNFT(address recipient, string memory tokenURI) public returns (uint256) {
+    //     _tokenIds.increment();
+    //     uint256 newItemId = _tokenIds.current();
+    //     _mint(recipient, newItemId);
+    //     _setTokenURI(newItemId, tokenURI);
+
+    //     return newItemId;
+    // }
+
     
     // function mintPresale(
     //     uint256 amountOfArts,
@@ -105,15 +125,6 @@ contract NFTMarket is ERC721URIStorage {
     //     emit PublicSaleMint(msg.sender, amountOfArts);
     // }
 
-    // function mintNFT(address recipient, string memory tokenURI) public returns (uint256) {
-    //     _tokenIds.increment();
-    //     uint256 newItemId = _tokenIds.current();
-    //     _mint(recipient, newItemId);
-    //     _setTokenURI(newItemId, tokenURI);
-
-    //     return newItemId;
-    // }
-
     function updateListingPrice(uint _listingPrice) public payable {
         require(owner == msg.sender, "Only marketplace owner can update listing price.");
         listingPrice = _listingPrice;
@@ -125,7 +136,7 @@ contract NFTMarket is ERC721URIStorage {
 
     function createTokenItem(uint256 tokenId, uint256 price) private {
         require(price > 0, "Price must be at least 1 wei");
-        require(msg.value == listingPrice, "Price must be equal to listing price");
+        // require(msg.value == listingPrice, "Price must be equal to listing price");
 
         idToMarketItem[tokenId] = MarketItem(
             tokenId,
