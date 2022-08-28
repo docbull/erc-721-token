@@ -36,16 +36,6 @@ contract NFTMarket is ERC721URIStorage {
         owner = payable(msg.sender);
     }
 
-    // function createToken(string memory tokenURI, uint256 price) public payable returns (uint) {
-    //     _tokenIds.increment();
-    //     uint256 newTokenId = _tokenIds.current();
-
-    //     _mint(msg.sender, newTokenId);
-    //     _setTokenURI(newTokenId, tokenURI);
-    //     createTokenItem(newTokenId, price);
-    //     return newTokenId;
-    // }
-
     function mintNFT(string memory tokenURI, uint256 price) public payable returns (uint) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
@@ -55,14 +45,6 @@ contract NFTMarket is ERC721URIStorage {
         createTokenItem(newTokenId, price);
         return newTokenId;
     }
-
-    // function mintNFT(address recipient, string memory tokenURI) public returns (uint256) {
-    //     _tokenIds.increment();
-    //     uint256 newItemId = _tokenIds.current();
-    //     _mint(recipient, newItemId);
-    //     _setTokenURI(newItemId, tokenURI);
-    //     return newItemId;
-    // }
 
     function updateListingPrice(uint _mintingFee) public payable {
         require(owner == msg.sender, "Only marketplace owner can update listing price.");
@@ -91,23 +73,6 @@ contract NFTMarket is ERC721URIStorage {
             price,
             false
         );
-
-        // idToMarketItem[tokenId] = MarketItem(
-        //     tokenId,
-        //     payable(msg.sender),
-        //     payable(address(this)),
-        //     price,
-        //     false
-        // );
-
-        // _transfer(msg.sender, address(this), tokenId);
-        // emit MarketItemCreated(
-        //     tokenId,
-        //     msg.sender,
-        //     address(this),
-        //     price,
-        //     false
-        // );
     }
 
     // priceOf returns selected item (i.e., token ID) price
@@ -140,13 +105,7 @@ contract NFTMarket is ERC721URIStorage {
         idToMarketItem[tokenId].sold = true;
         idToMarketItem[tokenId].seller = payable(idToMarketItem[tokenId].owner);
         idToMarketItem[tokenId].owner = payable(msg.sender);
-        // idToMarketItem[tokenId].owner = payable(msg.sender);
-        // idToMarketItem[tokenId].sold = true;
-        // idToMarketItem[tokenId].seller = payable(address(0));
         _itemsSold.increment();
-        // _transfer(address(this), msg.sender, tokenId);
-        // payable(owner).transfer(mintingFee);
-        // payable(seller).transfer(msg.value);
     }
 
     function fetchMarketItems() public view returns (MarketItem[] memory) {
