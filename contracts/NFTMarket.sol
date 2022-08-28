@@ -10,7 +10,7 @@ contract NFTMarket is ERC721URIStorage {
     Counters.Counter private _tokenIds;
     Counters.Counter private _itemsSold;
 
-    uint256 listingPrice = 0.025 ether;
+    uint256 mintingFee = 0.025 ether;
     address payable owner;
 
     mapping(uint256 => MarketItem) private idToMarketItem;
@@ -46,13 +46,13 @@ contract NFTMarket is ERC721URIStorage {
     //     return newTokenId;
     // }
 
-    function mintNFT(string memory tokenURI) public payable returns (uint) {
+    function mintNFT(string memory tokenURI, uint256 price) public payable returns (uint) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
         _mint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, tokenURI);
-        createTokenItem(newTokenId, listingPrice);
+        createTokenItem(newTokenId, price);
         return newTokenId;
     }
 
@@ -61,105 +61,64 @@ contract NFTMarket is ERC721URIStorage {
     //     uint256 newItemId = _tokenIds.current();
     //     _mint(recipient, newItemId);
     //     _setTokenURI(newItemId, tokenURI);
-
     //     return newItemId;
     // }
 
-    
-    // function mintPresale(
-    //     uint256 amountOfArts,
-    //     bytes32 hash,
-    //     bytes memory signature
-    // ) external payable whenPresaleStarted {
-    //     require(initializedYieldToken, "TNI");
-    //     require(
-    //         checkPresaleEligibility(hash, signature),
-    //         "NotEligible"
-    //     );
-    //     require(totalSupply() < MAX_ARTS, "AllMinted");
-    //     require(
-    //         amountOfArts <= presaleMaxMint,
-    //         "exceeds max"
-    //     );
-    //     require(
-    //         totalSupply() + amountOfArts <= MAX_ARTS,
-    //         "exceed supply"
-    //     );
-    //     require(
-    //         _totalClaimed[msg.sender] + amountOfArts <= presaleMaxMint,
-    //         "exceed per address"
-    //     );
-    //     require(amountOfArts > 0, "at least 1");
-    //     require(price * amountOfArts == msg.value, "wrong ETH amount");
-    //     uint256 _nextTokenId = totalSupply();
-    //     for (uint256 i = 0; i < amountOfArts; i++) {
-    //         _safeMint(msg.sender, _nextTokenId++);
-    //     }
-    //     _totalClaimed[msg.sender] += amountOfArts;
-    //     yieldToken.updateRewardOnMint(msg.sender);
-    //     emit PresaleMint(msg.sender, amountOfArts);
-    // }
-    // function mint(uint256 amountOfArts) external payable whenPublicSaleStarted {
-    //     require(initializedYieldToken, "TNI");
-    //     require(totalSupply() < MAX_ARTS, "All tokens have been minted");
-    //     require(
-    //         amountOfArts <= MAX_PER_MINT,
-    //         "exceeds max"
-    //     );
-    //     require(
-    //         totalSupply() + amountOfArts <= MAX_ARTS,
-    //         "exceed supply"
-    //     );
-    //     require(
-    //         _totalClaimed[msg.sender] + amountOfArts <= MAX_ARTS_MINT,
-    //         "exceed per address"
-    //     );
-    //     require(amountOfArts > 0, "at least 1");
-    //     require(price * amountOfArts == msg.value, "wrong ETH amount");
-    //     uint256 _nextTokenId = totalSupply();
-    //     for (uint256 i = 0; i < amountOfArts; i++) {
-    //         _safeMint(msg.sender, _nextTokenId++);
-    //     }
-    //     _totalClaimed[msg.sender] += amountOfArts;
-    //     yieldToken.updateRewardOnMint(msg.sender);
-    //     emit PublicSaleMint(msg.sender, amountOfArts);
-    // }
-
-    function updateListingPrice(uint _listingPrice) public payable {
+    function updateListingPrice(uint _mintingFee) public payable {
         require(owner == msg.sender, "Only marketplace owner can update listing price.");
-        listingPrice = _listingPrice;
+        mintingFee = _mintingFee;
     }
 
     function getListingPrice() public view returns (uint256) {
-        return listingPrice;
+        return mintingFee;
     }
 
     function createTokenItem(uint256 tokenId, uint256 price) private {
         require(price > 0, "Price must be at least 1 wei");
-        // require(msg.value == listingPrice, "Price must be equal to listing price");
+        // require(msg.value == mintingFee, "Price must be equal to listing price");
 
         idToMarketItem[tokenId] = MarketItem(
             tokenId,
             payable(msg.sender),
-            payable(address(this)),
+            payable(msg.sender),
             price,
             false
         );
-
-        _transfer(msg.sender, address(this), tokenId);
         emit MarketItemCreated(
             tokenId,
             msg.sender,
-            address(this),
+            msg.sender,
             price,
             false
         );
+
+        // idToMarketItem[tokenId] = MarketItem(
+        //     tokenId,
+        //     payable(msg.sender),
+        //     payable(address(this)),
+        //     price,
+        //     false
+        // );
+
+        // _transfer(msg.sender, address(this), tokenId);
+        // emit MarketItemCreated(
+        //     tokenId,
+        //     msg.sender,
+        //     address(this),
+        //     price,
+        //     false
+        // );
     }
 
-    /* allows someone to resell a token they have purchased */
+    // priceOf returns selected item (i.e., token ID) price
+    function priceOf(uint256 tokenId) public view returns (uint256) {
+        return idToMarketItem[tokenId].price;
+    }
+
+    // allows someone to resell a token they have purchased
     function resellToken(uint256 tokenId, uint256 price) public payable {
         require(idToMarketItem[tokenId].owner == msg.sender, "Only item owner can perform this operation");
-        require(msg.value == listingPrice, "Price must be equal to listing price");
+        require(msg.value == mintingFee, "Price must be equal to listing price");
         idToMarketItem[tokenId].sold = false;
         idToMarketItem[tokenId].price = price;
         idToMarketItem[tokenId].seller = payable(msg.sender);
@@ -175,13 +134,19 @@ contract NFTMarket is ERC721URIStorage {
         uint price = idToMarketItem[tokenId].price;
         address seller = idToMarketItem[tokenId].seller;
         require(msg.value == price, "Please submit the asking price in order to complete the purchase");
-        idToMarketItem[tokenId].owner = payable(msg.sender);
-        idToMarketItem[tokenId].sold = true;
-        idToMarketItem[tokenId].seller = payable(address(0));
-        _itemsSold.increment();
-        _transfer(address(this), msg.sender, tokenId);
-        payable(owner).transfer(listingPrice);
+        _transfer(idToMarketItem[tokenId].owner, msg.sender, tokenId);
+        // idToMarketItem[tokenId].owner = payable(msg.sender);
         payable(seller).transfer(msg.value);
+        idToMarketItem[tokenId].sold = true;
+        idToMarketItem[tokenId].seller = payable(idToMarketItem[tokenId].owner);
+        idToMarketItem[tokenId].owner = payable(msg.sender);
+        // idToMarketItem[tokenId].owner = payable(msg.sender);
+        // idToMarketItem[tokenId].sold = true;
+        // idToMarketItem[tokenId].seller = payable(address(0));
+        _itemsSold.increment();
+        // _transfer(address(this), msg.sender, tokenId);
+        // payable(owner).transfer(mintingFee);
+        // payable(seller).transfer(msg.value);
     }
 
     function fetchMarketItems() public view returns (MarketItem[] memory) {
