@@ -8,19 +8,18 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract NFTMarket is ERC721URIStorage {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
-    Counters.Counter private _itemsSold;
 
     uint256 mintingFee = 0.025 ether;
     address payable owner;
 
-    mapping(uint256 => MarketItem) private idToMarketItem;
+    mapping(uint256 => MarketItem) private getItemById;
 
     struct MarketItem {
         uint256 tokenId;
         address payable seller;
         address payable owner;
         uint256 price;
-        bool sold;
+        bool listed;
     }
 
     event MarketItemCreated (
@@ -28,9 +27,9 @@ contract NFTMarket is ERC721URIStorage {
         address seller,
         address owner,
         uint256 price,
-        bool sold
+        bool listed
     );
-
+    
     // ERC721(string description, string token_symbol)
     constructor() ERC721("NFT Market", "DBW") {
         owner = payable(msg.sender);
@@ -42,7 +41,7 @@ contract NFTMarket is ERC721URIStorage {
 
         _mint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, tokenURI);
-        createTokenItem(newTokenId, price);
+        createNFTItem(newTokenId, price);
         return newTokenId;
     }
 
@@ -51,15 +50,10 @@ contract NFTMarket is ERC721URIStorage {
         mintingFee = _mintingFee;
     }
 
-    function getListingPrice() public view returns (uint256) {
-        return mintingFee;
-    }
-
-    function createTokenItem(uint256 tokenId, uint256 price) private {
+    function createNFTItem(uint256 tokenId, uint256 price) private {
         require(price > 0, "Price must be at least 1 wei");
         // require(msg.value == mintingFee, "Price must be equal to listing price");
-
-        idToMarketItem[tokenId] = MarketItem(
+        getItemById[tokenId] = MarketItem(
             tokenId,
             payable(msg.sender),
             payable(msg.sender),
@@ -74,100 +68,42 @@ contract NFTMarket is ERC721URIStorage {
             false
         );
     }
-
-    // priceOf returns selected item (i.e., token ID) price
+    
+    // priceOf returns price of selected item (i.e., token)
     function priceOf(uint256 tokenId) public view returns (uint256) {
-        return idToMarketItem[tokenId].price;
+        return getItemById[tokenId].price;
+    }
+
+    // listItem lists the item (i.e., token) to marketplace with token ID and price
+    function listItem(uint256 tokenId, uint256 price) public payable {
+        require(getItemById[tokenId].owner == msg.sender, "Only item owner can list the item");
+        // require(msg.value == mintingFee, "You must pay fee for listing the item");
+        getItemById[tokenId].price = price;
+        getItemById[tokenId].listed = true;
     }
 
     // allows someone to resell a token they have purchased
     function resellToken(uint256 tokenId, uint256 price) public payable {
-        require(idToMarketItem[tokenId].owner == msg.sender, "Only item owner can perform this operation");
+        require(getItemById[tokenId].owner == msg.sender, "Only item owner can perform this operation");
         require(msg.value == mintingFee, "Price must be equal to listing price");
-        idToMarketItem[tokenId].sold = false;
-        idToMarketItem[tokenId].price = price;
-        idToMarketItem[tokenId].seller = payable(msg.sender);
-        idToMarketItem[tokenId].owner = payable(address(this));
-        _itemsSold.decrement();
-
+        getItemById[tokenId].listed = false;
+        getItemById[tokenId].price = price;
+        getItemById[tokenId].seller = payable(msg.sender);
+        getItemById[tokenId].owner = payable(address(this));
         _transfer(msg.sender, address(this), tokenId);
     }
 
-    /* Creates the sale of a marketplace item */
-    /* Transfers ownership of the item, as well as funds between parties */
-    function createMarketSale(uint256 tokenId) public payable {
-        uint price = idToMarketItem[tokenId].price;
-        address seller = idToMarketItem[tokenId].seller;
+    // buyItem 
+    function buyItem(uint256 tokenId) public payable {
+        uint price = getItemById[tokenId].price;
+        address seller = getItemById[tokenId].seller;
+        bool isListed = getItemById[tokenId].listed;
+        require(isListed == true, "You can buy listed item");
         require(msg.value == price, "Please submit the asking price in order to complete the purchase");
-        _transfer(idToMarketItem[tokenId].owner, msg.sender, tokenId);
-        // idToMarketItem[tokenId].owner = payable(msg.sender);
         payable(seller).transfer(msg.value);
-        idToMarketItem[tokenId].sold = true;
-        idToMarketItem[tokenId].seller = payable(idToMarketItem[tokenId].owner);
-        idToMarketItem[tokenId].owner = payable(msg.sender);
-        _itemsSold.increment();
-    }
-
-    function fetchMarketItems() public view returns (MarketItem[] memory) {
-        uint itemCount = _tokenIds.current();
-        uint unsoldItemCount = _tokenIds.current() - _itemsSold.current();
-        uint currentIndex = 0;
-
-        MarketItem[] memory items = new MarketItem[](unsoldItemCount);
-        for (uint i = 0; i < itemCount; i++) {
-            if (idToMarketItem[i + 1].owner == address(this)) {
-                uint currentId = i + 1;
-                MarketItem storage currentItem = idToMarketItem[currentId];
-                items[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-        return items;
-    }
-
-    function fetchMyNFTs() public view returns (MarketItem[] memory) {
-        uint totalItemCount = _tokenIds.current();
-        uint itemCount = 0;
-        uint currentIndex = 0;
-        
-        for (uint i = 0; i < totalItemCount; i++) {
-            if (idToMarketItem[i + 1].owner == msg.sender) {
-                itemCount += 1;
-            }
-        }
-
-        MarketItem[] memory items = new MarketItem[](itemCount);
-        for (uint i = 0; i < totalItemCount; i++) {
-            if (idToMarketItem[i + 1].owner == msg.sender) {
-                uint currentId = i + 1;
-                MarketItem storage currentItem = idToMarketItem[currentId];
-                items[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-        return items;
-    }
-
-    function fetchItemsListed() public view returns (MarketItem[] memory) {
-        uint totalItemCount = _tokenIds.current();
-        uint itemCount = 0;
-        uint currentIndex = 0;
-
-        for (uint i = 0; i < totalItemCount; i++) {
-            if (idToMarketItem[i + 1].seller == msg.sender) {
-                itemCount += 1;
-            }
-        }
-
-        MarketItem[] memory items = new MarketItem[](itemCount);
-        for (uint i = 0; i < totalItemCount; i++) {
-            if (idToMarketItem[i + 1].seller == msg.sender) {
-                uint currentId = i + 1;
-                MarketItem storage currentItem = idToMarketItem[currentId];
-                items[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-        return items;
+        _transfer(getItemById[tokenId].owner, msg.sender, tokenId);
+        // getItemById[tokenId].listed = true;
+        getItemById[tokenId].seller = payable(getItemById[tokenId].owner);
+        getItemById[tokenId].owner = payable(msg.sender);
     }
 }
