@@ -9,8 +9,8 @@ contract NFTMarket is ERC721URIStorage {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    uint256 mintingFee = 0.025 ether;
-    address payable owner;
+    address payable creator;
+    // uint256 mintingFee = 0.025 ether;
 
     mapping(uint256 => MarketItem) private getItemById;
 
@@ -31,28 +31,21 @@ contract NFTMarket is ERC721URIStorage {
     );
     
     // ERC721(string description, string token_symbol)
-    constructor() ERC721("NFT Market", "DBW") {
-        owner = payable(msg.sender);
-    }
+    constructor() ERC721("NFT Market", "DBW") {}
 
-    function mintNFT(string memory tokenURI, uint256 price) public payable returns (uint) {
+    function mintNFT(string memory tokenURI) public payable returns (uint) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
         _mint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, tokenURI);
-        createNFTItem(newTokenId, price);
+        createNFTItem(newTokenId);
         return newTokenId;
     }
 
-    function updateListingPrice(uint _mintingFee) public payable {
-        require(owner == msg.sender, "Only marketplace owner can update listing price.");
-        mintingFee = _mintingFee;
-    }
-
-    function createNFTItem(uint256 tokenId, uint256 price) private {
-        require(price > 0, "Price must be at least 1 wei");
-        // require(msg.value == mintingFee, "Price must be equal to listing price");
+    function createNFTItem(uint256 tokenId) private {
+        // require(price > 0, "Price must be at least 1 wei");
+        uint256 price = 0 ether;
         getItemById[tokenId] = MarketItem(
             tokenId,
             payable(msg.sender),
@@ -76,24 +69,26 @@ contract NFTMarket is ERC721URIStorage {
 
     // listItem lists the item (i.e., token) to marketplace with token ID and price
     function listItem(uint256 tokenId, uint256 price) public payable {
-        require(getItemById[tokenId].owner == msg.sender, "Only item owner can list the item");
-        // require(msg.value == mintingFee, "You must pay fee for listing the item");
+        address payable itemOwner = getItemById[tokenId].owner;
+        require(itemOwner == msg.sender, "Only item owner can list the item");
+        require(price > 0, "Price must be at least 1 wei");
         getItemById[tokenId].price = price;
         getItemById[tokenId].listed = true;
+        getItemById[tokenId].seller = itemOwner;
     }
 
-    // allows someone to resell a token they have purchased
-    function resellToken(uint256 tokenId, uint256 price) public payable {
-        require(getItemById[tokenId].owner == msg.sender, "Only item owner can perform this operation");
-        require(msg.value == mintingFee, "Price must be equal to listing price");
-        getItemById[tokenId].listed = false;
+    // updatePrice updates listed item with token ID
+    function updatePrice(uint256 tokenId, uint256 price) public payable {
+        address payable itemOwner = getItemById[tokenId].owner;
+        require(itemOwner == msg.sender, "Only item owner can list the item");
+        require(getItemById[tokenId].listed == true, "Only ");
+        require(price > 0, "Price must be at least 1 wei");
         getItemById[tokenId].price = price;
-        getItemById[tokenId].seller = payable(msg.sender);
-        getItemById[tokenId].owner = payable(address(this));
-        _transfer(msg.sender, address(this), tokenId);
     }
 
-    // buyItem 
+    // buyItem requests to pay ether to the buyer for purchasing item,
+    // and it transfers the item from seller to buyer if the buyer successfully
+    // payed ether
     function buyItem(uint256 tokenId) public payable {
         uint price = getItemById[tokenId].price;
         address seller = getItemById[tokenId].seller;
