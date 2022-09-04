@@ -31,7 +31,7 @@ contract NFTMarket is ERC721URIStorage {
     );
     
     // ERC721(string description, string token_symbol)
-    constructor() ERC721("NFT Market", "DBW") {}
+    constructor() ERC721("GRY NFT Market", "GRY") {}
 
     function mintNFT(string memory tokenURI) public payable returns (uint) {
         _tokenIds.increment();
@@ -81,7 +81,7 @@ contract NFTMarket is ERC721URIStorage {
     function updatePrice(uint256 tokenId, uint256 price) public payable {
         address payable itemOwner = getItemById[tokenId].owner;
         require(itemOwner == msg.sender, "Only item owner can list the item");
-        require(getItemById[tokenId].listed == true, "Only ");
+        require(getItemById[tokenId].listed == true, "Only the listed item could be ran");
         require(price > 0, "Price must be at least 1 wei");
         getItemById[tokenId].price = price;
     }
