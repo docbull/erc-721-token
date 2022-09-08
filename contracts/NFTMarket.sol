@@ -86,9 +86,8 @@ contract NFTMarket is ERC721URIStorage {
         getItemById[tokenId].price = price;
     }
 
-    // buyItem requests to pay ether to the buyer for purchasing item,
-    // and it transfers the item from seller to buyer if the buyer successfully
-    // payed ether
+    // buyItem requests to pay ether to the buyer for purchasing item, and it transfers the item
+    // from seller to buyer if the buyer successfully payed the price
     function buyItem(uint256 tokenId) public payable {
         uint price = getItemById[tokenId].price;
         address seller = getItemById[tokenId].seller;
@@ -97,8 +96,9 @@ contract NFTMarket is ERC721URIStorage {
         require(msg.value == price, "Please submit the asking price in order to complete the purchase");
         payable(seller).transfer(msg.value);
         _transfer(getItemById[tokenId].owner, msg.sender, tokenId);
-        // getItemById[tokenId].listed = true;
         getItemById[tokenId].seller = payable(getItemById[tokenId].owner);
         getItemById[tokenId].owner = payable(msg.sender);
+        getItemById[tokenId].price = 0;
+        getItemById[tokenId].listed = false;
     }
 }
